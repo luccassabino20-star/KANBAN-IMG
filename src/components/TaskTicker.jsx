@@ -1,0 +1,51 @@
+function isOverdue(card) {
+  if (!card.due) return false;
+  const allDone = card.checklist && card.checklist.length > 0 && card.checklist.every((i) => i.done);
+  if (allDone) return false;
+  return new Date(card.due + "T23:59:59").getTime() < Date.now();
+}
+
+export default function TaskTicker({ board, onOpenCard }) {
+  if (!board) return null;
+
+  const listTitleById = new Map(board.lists.map((l) => [l.id, l.title]));
+  const pending = board.lists
+    .flatMap((list) => list.cardIds.map((cardId) => ({ card: board.cards[cardId], listTitle: listTitleById.get(list.id) })))
+    .filter((entry) => entry.card && !entry.card.completed);
+
+  if (pending.length === 0) return null;
+
+  const duration = Math.max(18, pending.length * 4.5);
+
+  function renderItems(keyPrefix, ariaHidden) {
+    return pending.map(({ card, listTitle }) => (
+      <button
+        key={`${keyPrefix}-${card.id}`}
+        type="button"
+        className="task-ticker-item"
+        tabIndex={ariaHidden ? -1 : 0}
+        aria-hidden={ariaHidden || undefined}
+        onClick={() => onOpenCard(card.id)}
+      >
+        {card.urgent && <span className="task-ticker-flag urgent" title="Urgente" />}
+        {card.important && <span className="task-ticker-flag important" title="Importante" />}
+        <span className={"task-ticker-title" + (isOverdue(card) ? " overdue" : "")}>{card.title}</span>
+        {listTitle && <span className="task-ticker-list">{listTitle}</span>}
+      </button>
+    ));
+  }
+
+  return (
+    <div className="task-ticker">
+      <span className="task-ticker-label">Pendentes ({pending.length})</span>
+      <div className="task-ticker-track">
+        <div className="task-ticker-content" style={{ animationDuration: `${duration}s` }}>
+          {renderItems("a", false)}
+        </div>
+        <div className="task-ticker-content" style={{ animationDuration: `${duration}s` }} aria-hidden="true">
+          {renderItems("b", true)}
+        </div>
+      </div>
+    </div>
+  );
+}

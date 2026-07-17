@@ -1,0 +1,69 @@
+const BASE = "/api";
+
+async function request(path, options = {}) {
+  const res = await fetch(BASE + path, {
+    method: options.method || "GET",
+    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    credentials: "same-origin",
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* no body */
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || `Erro ${res.status}`);
+  }
+  return data;
+}
+
+// ---------- Auth ----------
+export const getAuthStatus = () => request("/auth/status");
+export const getMe = () => request("/auth/me");
+export const setupMaster = (data) => request("/auth/setup", { method: "POST", body: data });
+export const registerSelf = (data) => request("/auth/register", { method: "POST", body: data });
+export const login = (data) => request("/auth/login", { method: "POST", body: data });
+export const logout = () => request("/auth/logout", { method: "POST" });
+export const changePassword = (data) => request("/auth/change-password", { method: "POST", body: data });
+
+// ---------- Users ----------
+export const listUsers = () => request("/users");
+export const createUser = (data) => request("/users", { method: "POST", body: data });
+export const renameUser = (id, data) => request(`/users/${id}`, { method: "PATCH", body: data });
+export const resetUserPassword = (id, newPassword) =>
+  request(`/users/${id}/reset-password`, { method: "POST", body: { newPassword } });
+export const deleteUser = (id) => request(`/users/${id}`, { method: "DELETE" });
+
+// ---------- Boards ----------
+export const getWorkspace = () => request("/boards");
+export const createBoard = (data) => request("/boards", { method: "POST", body: data });
+export const renameBoard = (id, title) => request(`/boards/${id}`, { method: "PATCH", body: { title } });
+export const setBoardBackground = (id, background) => request(`/boards/${id}`, { method: "PATCH", body: { background } });
+export const deleteBoard = (id) => request(`/boards/${id}`, { method: "DELETE" });
+export const clearBoard = (id) => request(`/boards/${id}/clear`, { method: "POST" });
+export const createList = (boardId, data) => request(`/boards/${boardId}/lists`, { method: "POST", body: data });
+export const setListOrder = (boardId, orderedListIds) =>
+  request(`/boards/${boardId}/list-order`, { method: "PUT", body: { orderedListIds } });
+
+// ---------- Lists ----------
+export const renameList = (id, title) => request(`/lists/${id}`, { method: "PATCH", body: { title } });
+export const setListColor = (id, color) => request(`/lists/${id}`, { method: "PATCH", body: { color } });
+export const deleteList = (id) => request(`/lists/${id}`, { method: "DELETE" });
+export const clearListCards = (id) => request(`/lists/${id}/clear`, { method: "POST" });
+export const setCardOrder = (listId, cardIds) => request(`/lists/${listId}/card-order`, { method: "PUT", body: { cardIds } });
+export const createCard = (listId, data) => request(`/lists/${listId}/cards`, { method: "POST", body: data });
+
+// ---------- Cards ----------
+export const updateCard = (id, patch) => request(`/cards/${id}`, { method: "PATCH", body: patch });
+export const deleteCard = (id) => request(`/cards/${id}`, { method: "DELETE" });
+
+// ---------- Geocoding ----------
+export const geocodeAddress = (q) => request(`/geocode?q=${encodeURIComponent(q)}`);
+
+// ---------- Meeting Minutes (Atas) ----------
+export const listMinutes = () => request("/minutes");
+export const createMinute = (data) => request("/minutes", { method: "POST", body: data });
+export const updateMinute = (id, patch) => request(`/minutes/${id}`, { method: "PATCH", body: patch });
+export const deleteMinute = (id) => request(`/minutes/${id}`, { method: "DELETE" });

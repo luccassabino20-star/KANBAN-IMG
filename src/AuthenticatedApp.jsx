@@ -1,0 +1,96 @@
+import { useEffect, useState } from "react";
+import Sidebar from "./components/Sidebar.jsx";
+import TopBar from "./components/TopBar.jsx";
+import TaskTicker from "./components/TaskTicker.jsx";
+import ViewSwitcher from "./components/ViewSwitcher.jsx";
+import BoardView from "./components/BoardView.jsx";
+import TableView from "./components/views/TableView.jsx";
+import CalendarView from "./components/views/CalendarView.jsx";
+import TimelineView from "./components/views/TimelineView.jsx";
+import DashboardView from "./components/views/DashboardView.jsx";
+import MapView from "./components/views/MapView.jsx";
+import MatrixView from "./components/views/MatrixView.jsx";
+import CardModal from "./components/CardModal.jsx";
+import MinutesScreen from "./screens/MinutesScreen.jsx";
+import { useBoardState } from "./state/BoardContext.jsx";
+import { useUsers } from "./state/UsersContext.jsx";
+
+export default function AuthenticatedApp() {
+  const state = useBoardState();
+  const { users } = useUsers();
+  const [activeBoardId, setActiveBoardId] = useState(null);
+  const [activeCardId, setActiveCardId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [memberFilter, setMemberFilter] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [view, setView] = useState("board");
+  const [screen, setScreen] = useState("board"); // "board" | "minutes"
+
+  useEffect(() => {
+    if (!state.hydrated) return;
+    if (!activeBoardId || !state.boards.some((b) => b.id === activeBoardId)) {
+      setActiveBoardId(state.boards[0]?.id ?? null);
+    }
+  }, [state.hydrated, state.boards, activeBoardId]);
+
+  const board = state.boards.find((b) => b.id === activeBoardId) || null;
+
+  function selectBoard(id) {
+    setScreen("board");
+    setActiveBoardId(id);
+  }
+
+  if (!state.hydrated) {
+    return <div className="app-loading">Carregando quadros...</div>;
+  }
+
+  const viewProps = { board, users, searchQuery, memberFilter, onOpenCard: setActiveCardId };
+
+  return (
+    <div className="app-shell">
+      <Sidebar
+        collapsed={!sidebarOpen}
+        activeBoardId={activeBoardId}
+        onSelectBoard={selectBoard}
+        screen={screen}
+        onOpenMinutes={() => setScreen("minutes")}
+      />
+      <div className="main-area">
+        {screen === "minutes" ? (
+          <MinutesScreen onToggleSidebar={() => setSidebarOpen((o) => !o)} />
+        ) : (
+          <>
+            <TopBar
+              board={board}
+              onToggleSidebar={() => setSidebarOpen((o) => !o)}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              memberFilter={memberFilter}
+              onFilterChange={setMemberFilter}
+            />
+            {board && <TaskTicker board={board} onOpenCard={setActiveCardId} />}
+            {board && <ViewSwitcher view={view} onChange={setView} />}
+            {board ? (
+              <div className="view-content-area" style={board.background ? { background: board.background } : undefined}>
+                {view === "board" && (
+                  <BoardView board={board} members={users} searchQuery={searchQuery} memberFilter={memberFilter} onOpenCard={setActiveCardId} />
+                )}
+                {view === "table" && <TableView {...viewProps} />}
+                {view === "calendar" && <CalendarView {...viewProps} />}
+                {view === "timeline" && <TimelineView {...viewProps} />}
+                {view === "dashboard" && <DashboardView {...viewProps} />}
+                {view === "map" && <MapView {...viewProps} />}
+                {view === "matrix" && <MatrixView {...viewProps} />}
+              </div>
+            ) : (
+              <div className="empty-state">Nenhum quadro. Crie um na barra lateral.</div>
+            )}
+          </>
+        )}
+      </div>
+      {activeCardId && board && board.cards[activeCardId] && (
+        <CardModal boardId={board.id} cardId={activeCardId} onClose={() => setActiveCardId(null)} />
+      )}
+    </div>
+  );
+}

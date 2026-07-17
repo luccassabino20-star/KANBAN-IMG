@@ -1,0 +1,190 @@
+function updateBoard(state, boardId, updater) {
+  return { ...state, boards: state.boards.map((b) => (b.id === boardId ? updater(b) : b)) };
+}
+
+export function reducer(state, action) {
+  switch (action.type) {
+    case "HYDRATE":
+      return { ...state, boards: action.boards, hydrated: true };
+
+    // ---------- Boards ----------
+    case "ADD_BOARD":
+      return {
+        ...state,
+        boards: [
+          ...state.boards,
+          {
+            id: action.id,
+            title: action.title,
+            background: null,
+            ownerId: action.ownerId,
+            visibility: action.visibility === "private" ? "private" : "shared",
+            lists: [],
+            cards: {},
+          },
+        ],
+      };
+    case "RENAME_BOARD":
+      return { ...state, boards: state.boards.map((b) => (b.id === action.boardId ? { ...b, title: action.title } : b)) };
+    case "SET_BOARD_BACKGROUND":
+      return {
+        ...state,
+        boards: state.boards.map((b) => (b.id === action.boardId ? { ...b, background: action.background } : b)),
+      };
+    case "DELETE_BOARD":
+      return { ...state, boards: state.boards.filter((b) => b.id !== action.boardId) };
+    case "CLEAR_BOARD":
+      return updateBoard(state, action.boardId, (b) => ({ ...b, lists: [], cards: {} }));
+
+    // ---------- Lists ----------
+    case "ADD_LIST":
+      return updateBoard(state, action.boardId, (b) => ({
+        ...b,
+        lists: [...b.lists, { id: action.id, title: action.title, color: null, cardIds: [] }],
+      }));
+    case "RENAME_LIST":
+      return updateBoard(state, action.boardId, (b) => ({
+        ...b,
+        lists: b.lists.map((l) => (l.id === action.listId ? { ...l, title: action.title } : l)),
+      }));
+    case "SET_LIST_COLOR":
+      return updateBoard(state, action.boardId, (b) => ({
+        ...b,
+        lists: b.lists.map((l) => (l.id === action.listId ? { ...l, color: action.color } : l)),
+      }));
+    case "DELETE_LIST":
+      return updateBoard(state, action.boardId, (b) => {
+        const list = b.lists.find((l) => l.id === action.listId);
+        const cards = { ...b.cards };
+        (list?.cardIds || []).forEach((cid) => delete cards[cid]);
+        return { ...b, lists: b.lists.filter((l) => l.id !== action.listId), cards };
+      });
+    case "REORDER_LISTS":
+      return updateBoard(state, action.boardId, (b) => {
+        const map = new Map(b.lists.map((l) => [l.id, l]));
+        const lists = action.orderedListIds.map((id) => map.get(id)).filter(Boolean);
+        return { ...b, lists };
+      });
+    case "SORT_LIST_CARDS":
+      return updateBoard(state, action.boardId, (b) => ({
+        ...b,
+        lists: b.lists.map((l) =>
+          l.id === action.listId
+            ? { ...l, cardIds: [...l.cardIds].sort((x, y) => (b.cards[x]?.title || "").localeCompare(b.cards[y]?.title || "", "pt-BR")) }
+            : l
+        ),
+      }));
+    case "CLEAR_LIST_CARDS":
+      return updateBoard(state, action.boardId, (b) => {
+        const list = b.lists.find((l) => l.id === action.listId);
+        const cards = { ...b.cards };
+        (list?.cardIds || []).forEach((cid) => delete cards[cid]);
+        return { ...b, lists: b.lists.map((l) => (l.id === action.listId ? { ...l, cardIds: [] } : l)), cards };
+      });
+
+    // ---------- Cards ----------
+    case "ADD_CARD":
+      return updateBoard(state, action.boardId, (b) => {
+        const card = {
+          id: action.id,
+          title: action.title,
+          description: "",
+          labels: [],
+          due: null,
+          startDate: null,
+          location: null,
+          checklist: [],
+          memberIds: [],
+          completed: false,
+          urgent: false,
+          important: false,
+        };
+        return {
+          ...b,
+          cards: { ...b.cards, [action.id]: card },
+          lists: b.lists.map((l) => (l.id === action.listId ? { ...l, cardIds: [...l.cardIds, action.id] } : l)),
+        };
+      });
+    case "UPDATE_CARD":
+      return updateBoard(state, action.boardId, (b) => ({
+        ...b,
+        cards: { ...b.cards, [action.cardId]: { ...b.cards[action.cardId], ...action.patch } },
+      }));
+    case "DELETE_CARD":
+      return updateBoard(state, action.boardId, (b) => {
+        const cards = { ...b.cards };
+        delete cards[action.cardId];
+        return { ...b, cards, lists: b.lists.map((l) => ({ ...l, cardIds: l.cardIds.filter((cid) => cid !== action.cardId) })) };
+      });
+    case "MOVE_CARD":
+      return updateBoard(state, action.boardId, (b) => {
+        const lists = b.lists.map((l) => ({ ...l, cardIds: [...l.cardIds] }));
+        const fromList = lists.find((l) => l.id === action.fromListId);
+        const toList = lists.find((l) => l.id === action.toListId);
+        if (!fromList || !toList) return b;
+
+        if (fromList.id === toList.id) {
+          const idx = fromList.cardIds.indexOf(action.cardId);
+          if (idx === -1) return b;
+          fromList.cardIds.splice(idx, 1);
+          let insertAt = action.toIndex;
+          if (insertAt > idx) insertAt -= 1;
+          insertAt = Math.max(0, Math.min(insertAt, fromList.cardIds.length));
+          fromList.cardIds.splice(insertAt, 0, action.cardId);
+        } else {
+          const idx = fromList.cardIds.indexOf(action.cardId);
+          if (idx !== -1) fromList.cardIds.splice(idx, 1);
+          let insertAt = action.toIndex;
+          insertAt = Math.max(0, Math.min(insertAt, toList.cardIds.length));
+          toList.cardIds.splice(insertAt, 0, action.cardId);
+        }
+        return { ...b, lists };
+      });
+    case "TOGGLE_CARD_COMPLETED":
+      return updateBoard(state, action.boardId, (b) => {
+        const card = b.cards[action.cardId];
+        if (!card) return b;
+        return { ...b, cards: { ...b.cards, [action.cardId]: { ...card, completed: !card.completed } } };
+      });
+    case "TOGGLE_CARD_LABEL":
+      return updateBoard(state, action.boardId, (b) => {
+        const card = b.cards[action.cardId];
+        if (!card) return b;
+        const has = card.labels.includes(action.labelId);
+        const labels = has ? card.labels.filter((l) => l !== action.labelId) : [...card.labels, action.labelId];
+        return { ...b, cards: { ...b.cards, [action.cardId]: { ...card, labels } } };
+      });
+    case "TOGGLE_CARD_MEMBER":
+      return updateBoard(state, action.boardId, (b) => {
+        const card = b.cards[action.cardId];
+        if (!card) return b;
+        const has = (card.memberIds || []).includes(action.memberId);
+        const memberIds = has ? card.memberIds.filter((m) => m !== action.memberId) : [...(card.memberIds || []), action.memberId];
+        return { ...b, cards: { ...b.cards, [action.cardId]: { ...card, memberIds } } };
+      });
+    case "ADD_CHECKLIST_ITEM":
+      return updateBoard(state, action.boardId, (b) => {
+        const card = b.cards[action.cardId];
+        if (!card) return b;
+        const checklist = [...card.checklist, { text: action.text, done: false }];
+        return { ...b, cards: { ...b.cards, [action.cardId]: { ...card, checklist } } };
+      });
+    case "TOGGLE_CHECKLIST_ITEM":
+      return updateBoard(state, action.boardId, (b) => {
+        const card = b.cards[action.cardId];
+        if (!card) return b;
+        const checklist = card.checklist.map((it, i) => (i === action.index ? { ...it, done: !it.done } : it));
+        return { ...b, cards: { ...b.cards, [action.cardId]: { ...card, checklist } } };
+      });
+    case "REMOVE_CHECKLIST_ITEM":
+      return updateBoard(state, action.boardId, (b) => {
+        const card = b.cards[action.cardId];
+        if (!card) return b;
+        const checklist = card.checklist.filter((_, i) => i !== action.index);
+        return { ...b, cards: { ...b.cards, [action.cardId]: { ...card, checklist } } };
+      });
+
+    default:
+      return state;
+  }
+}

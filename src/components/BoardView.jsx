@@ -1,0 +1,138 @@
+import { useRef, useState } from "react";
+import { useBoardDispatch } from "../state/BoardContext.jsx";
+import { uid } from "../utils/id.js";
+import ListColumn from "./ListColumn.jsx";
+
+export default function BoardView({ board, members, searchQuery, memberFilter, onOpenCard }) {
+  const dispatch = useBoardDispatch();
+  const [dragCard, setDragCard] = useState(null); // { cardId, fromListId }
+  const [dragListId, setDragListId] = useState(null);
+  const [addingList, setAddingList] = useState(false);
+  const [newListTitle, setNewListTitle] = useState("");
+  const lastMoveKeyRef = useRef(null);
+  const lastListOrderKeyRef = useRef(null);
+
+  function handleCardDragStart(cardId, fromListId) {
+    setDragCard({ cardId, fromListId });
+    lastMoveKeyRef.current = null;
+  }
+  function handleCardDragEnd() {
+    setDragCard(null);
+    lastMoveKeyRef.current = null;
+  }
+  function handleCardHover(targetListId, targetIndex) {
+    if (!dragCard) return;
+    const key = `${targetListId}:${targetIndex}`;
+    if (lastMoveKeyRef.current === key) return;
+    lastMoveKeyRef.current = key;
+    dispatch({
+      type: "MOVE_CARD",
+      boardId: board.id,
+      cardId: dragCard.cardId,
+      fromListId: dragCard.fromListId,
+      toListId: targetListId,
+      toIndex: targetIndex,
+    });
+    if (targetListId !== dragCard.fromListId) {
+      setDragCard({ cardId: dragCard.cardId, fromListId: targetListId });
+    }
+  }
+
+  function handleListDragStart(listId) {
+    setDragListId(listId);
+    lastListOrderKeyRef.current = null;
+  }
+  function handleListDragEnd() {
+    setDragListId(null);
+    lastListOrderKeyRef.current = null;
+  }
+  function handleListHover(targetListId) {
+    if (!dragListId || dragListId === targetListId) return;
+    const ids = board.lists.map((l) => l.id);
+    const from = ids.indexOf(dragListId);
+    const to = ids.indexOf(targetListId);
+    if (from === -1 || to === -1) return;
+    const reordered = [...ids];
+    reordered.splice(from, 1);
+    reordered.splice(to, 0, dragListId);
+    const key = reordered.join(",");
+    if (lastListOrderKeyRef.current === key) return;
+    lastListOrderKeyRef.current = key;
+    dispatch({ type: "REORDER_LISTS", boardId: board.id, orderedListIds: reordered });
+  }
+
+  function submitNewList() {
+    const title = newListTitle.trim();
+    if (!title) {
+      setAddingList(false);
+      setNewListTitle("");
+      return;
+    }
+    dispatch({ type: "ADD_LIST", boardId: board.id, id: uid(), title });
+    setNewListTitle("");
+  }
+
+  return (
+    <main className="board-wrapper">
+      <div className="board">
+        {board.lists.map((list) => (
+          <ListColumn
+            key={list.id}
+            board={board}
+            list={list}
+            members={members}
+            searchQuery={searchQuery}
+            memberFilter={memberFilter}
+            onOpenCard={onOpenCard}
+            dragCard={dragCard}
+            dragListId={dragListId}
+            onCardDragStart={handleCardDragStart}
+            onCardDragEnd={handleCardDragEnd}
+            onCardHover={handleCardHover}
+            onListDragStart={handleListDragStart}
+            onListDragEnd={handleListDragEnd}
+            onListHover={handleListHover}
+          />
+        ))}
+
+        <div className="list-composer-wrap">
+          {addingList ? (
+            <div className="list-composer">
+              <input
+                autoFocus
+                placeholder="Insira o título da lista..."
+                value={newListTitle}
+                onChange={(e) => setNewListTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitNewList();
+                  if (e.key === "Escape") {
+                    setAddingList(false);
+                    setNewListTitle("");
+                  }
+                }}
+              />
+              <div className="composer-actions">
+                <button className="btn-primary btn-small" onClick={submitNewList}>
+                  Adicionar lista
+                </button>
+                <button
+                  className="btn-cancel"
+                  onClick={() => {
+                    setAddingList(false);
+                    setNewListTitle("");
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className="add-list-btn" onClick={() => setAddingList(true)}>
+              + Adicionar outra lista
+            </button>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
