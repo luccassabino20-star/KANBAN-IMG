@@ -3,13 +3,10 @@ import jwt from "jsonwebtoken";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = process.env.KANBAN_DATA_DIR || path.join(__dirname, "data");
-const secretPath = path.join(dataDir, "jwt-secret.txt");
 
 function loadOrCreateSecret() {
+  const dataDir = process.env.KANBAN_DATA_DIR || path.join(process.cwd(), "server", "data");
+  const secretPath = path.join(dataDir, "jwt-secret.txt");
   fs.mkdirSync(path.dirname(secretPath), { recursive: true });
   if (fs.existsSync(secretPath)) return fs.readFileSync(secretPath, "utf-8").trim();
   const secret = crypto.randomBytes(48).toString("hex");

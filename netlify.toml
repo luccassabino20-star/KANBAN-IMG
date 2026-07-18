@@ -1,11 +1,11 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
-# Troque a URL abaixo pela URL do backend depois de fazer o deploy dele (ex: Render).
 [[redirects]]
   from = "/api/*"
-  to = "https://SEU-BACKEND.onrender.com/api/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
 

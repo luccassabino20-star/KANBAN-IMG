@@ -4,3 +4,6 @@ server/data/
 .env
 .env.local
 .claude/
+
+# Local Netlify folder
+.netlify
