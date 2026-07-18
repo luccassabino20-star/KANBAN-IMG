@@ -89,4 +89,4 @@ router.delete(
   })
 );
 
-export default router;
+export { router };

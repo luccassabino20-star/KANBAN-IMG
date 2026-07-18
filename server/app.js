@@ -4,13 +4,13 @@ import cors from "cors";
 import path from "node:path";
 import fs from "node:fs";
 
-import authRouter from "./routes/auth.js";
-import usersRouter from "./routes/users.js";
-import boardsRouter from "./routes/boards.js";
-import listsRouter from "./routes/lists.js";
-import cardsRouter from "./routes/cards.js";
-import geocodeRouter from "./routes/geocode.js";
-import minutesRouter from "./routes/minutes.js";
+import { router as authRouter } from "./routes/auth.js";
+import { router as usersRouter } from "./routes/users.js";
+import { router as boardsRouter } from "./routes/boards.js";
+import { router as listsRouter } from "./routes/lists.js";
+import { router as cardsRouter } from "./routes/cards.js";
+import { router as geocodeRouter } from "./routes/geocode.js";
+import { router as minutesRouter } from "./routes/minutes.js";
 
 export const app = express();
 

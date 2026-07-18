@@ -78,4 +78,4 @@ router.put(
   })
 );
 
-export default router;
+export { router };

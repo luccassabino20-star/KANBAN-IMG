@@ -142,4 +142,4 @@ router.post(
   })
 );
 
-export default router;
+export { router };
