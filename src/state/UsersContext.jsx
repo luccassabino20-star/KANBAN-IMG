@@ -34,9 +34,13 @@ export function UsersProvider({ children }) {
     await api.renameUser(id, data);
     await refresh();
   }
+  async function setRole(id, role) {
+    await api.setUserRole(id, role);
+    await refresh();
+  }
 
   return (
-    <UsersContext.Provider value={{ users, loading, refresh, createUser, deleteUser, resetPassword, renameUser }}>
+    <UsersContext.Provider value={{ users, loading, refresh, createUser, deleteUser, resetPassword, renameUser, setRole }}>
       {children}
     </UsersContext.Provider>
   );

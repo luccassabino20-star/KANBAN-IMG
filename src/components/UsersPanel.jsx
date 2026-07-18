@@ -5,7 +5,7 @@ import { useToast } from "../state/ToastContext.jsx";
 import { initials, colorForUser } from "../utils/members.js";
 
 export default function UsersPanel({ onClose }) {
-  const { users, createUser, deleteUser, resetPassword } = useUsers();
+  const { users, createUser, deleteUser, resetPassword, setRole } = useUsers();
   const { user: currentUser } = useAuth();
   const showToast = useToast();
 
@@ -33,6 +33,16 @@ export default function UsersPanel({ onClose }) {
       setError(err.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleMakeMaster(u) {
+    if (!confirm(`Tornar "${u.name}" um usuário master? Ele passará a ter acesso administrativo completo.`)) return;
+    try {
+      await setRole(u.id, "master");
+      showToast(`${u.name} agora é master`);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -109,6 +119,9 @@ export default function UsersPanel({ onClose }) {
                     <td className="users-table-actions">
                       {u.role !== "master" && (
                         <>
+                          <button className="btn-ghost btn-small" onClick={() => handleMakeMaster(u)}>
+                            Tornar master
+                          </button>
                           <button
                             className="btn-ghost btn-small"
                             onClick={() => {

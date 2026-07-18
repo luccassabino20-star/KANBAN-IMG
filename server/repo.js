@@ -51,6 +51,10 @@ export async function updateUser(id, { name, email }) {
 export async function setPassword(id, passwordHash) {
   await q("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, id]);
 }
+export async function setUserRole(id, role) {
+  await q("UPDATE users SET role = $1 WHERE id = $2", [role, id]);
+  return getUserById(id);
+}
 export async function deleteUser(id) {
   await q("DELETE FROM users WHERE id = $1", [id]);
 }

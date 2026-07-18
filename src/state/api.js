@@ -34,6 +34,7 @@ export const createUser = (data) => request("/users", { method: "POST", body: da
 export const renameUser = (id, data) => request(`/users/${id}`, { method: "PATCH", body: data });
 export const resetUserPassword = (id, newPassword) =>
   request(`/users/${id}/reset-password`, { method: "POST", body: { newPassword } });
+export const setUserRole = (id, role) => request(`/users/${id}/role`, { method: "POST", body: { role } });
 export const deleteUser = (id) => request(`/users/${id}`, { method: "DELETE" });
 
 // ---------- Boards ----------

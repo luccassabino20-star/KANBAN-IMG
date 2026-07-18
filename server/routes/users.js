@@ -11,6 +11,7 @@ import {
   updateUser,
   deleteUser,
   setPassword,
+  setUserRole,
   scrubUserFromCards,
   deletePrivateBoardsByOwner,
 } from "../repo.js";
@@ -56,6 +57,21 @@ router.patch(
       if (existing && existing.id !== target.id) return res.status(409).json({ error: "E-mail já em uso" });
     }
     const updated = await updateUser(target.id, { name, email });
+    res.json(publicUser(updated));
+  })
+);
+
+router.post(
+  "/:id/role",
+  requireMaster,
+  ah(async (req, res) => {
+    const target = await getUserById(req.params.id);
+    if (!target) return res.status(404).json({ error: "Usuário não encontrado" });
+    const { role } = req.body || {};
+    if (role !== "master" && role !== "member") {
+      return res.status(400).json({ error: "Papel inválido" });
+    }
+    const updated = await setUserRole(target.id, role);
     res.json(publicUser(updated));
   })
 );
