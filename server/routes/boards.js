@@ -1,54 +1,81 @@
 import { Router } from "express";
 import { requireAuth, requireBoardAccess } from "../middleware.js";
+import { ah } from "../asyncHandler.js";
 import * as repo from "../repo.js";
 
 const router = Router();
 router.use(requireAuth);
 
-router.get("/", (req, res) => {
-  res.json({ boards: repo.getWorkspace(req.user.id) });
-});
+router.get(
+  "/",
+  ah(async (req, res) => {
+    res.json({ boards: await repo.getWorkspace(req.user.id) });
+  })
+);
 
-router.post("/", (req, res) => {
-  const { id, title, visibility } = req.body || {};
-  if (!title?.trim()) return res.status(400).json({ error: "Título obrigatório" });
-  const boardId = repo.createBoard({ id, title: title.trim(), ownerId: req.user.id, visibility });
-  res.status(201).json({ id: boardId });
-});
+router.post(
+  "/",
+  ah(async (req, res) => {
+    const { id, title, visibility } = req.body || {};
+    if (!title?.trim()) return res.status(400).json({ error: "Título obrigatório" });
+    const boardId = await repo.createBoard({ id, title: title.trim(), ownerId: req.user.id, visibility });
+    res.status(201).json({ id: boardId });
+  })
+);
 
-router.patch("/:id", requireBoardAccess((req) => req.params.id), (req, res) => {
-  const { title, background } = req.body || {};
-  if (title !== undefined) repo.renameBoard(req.params.id, title.trim() || "Quadro");
-  if (background !== undefined) repo.setBoardBackground(req.params.id, background);
-  res.json({ ok: true });
-});
+router.patch(
+  "/:id",
+  requireBoardAccess((req) => req.params.id),
+  ah(async (req, res) => {
+    const { title, background } = req.body || {};
+    if (title !== undefined) await repo.renameBoard(req.params.id, title.trim() || "Quadro");
+    if (background !== undefined) await repo.setBoardBackground(req.params.id, background);
+    res.json({ ok: true });
+  })
+);
 
-router.delete("/:id", requireBoardAccess((req) => req.params.id), (req, res) => {
-  const access = repo.getBoardAccessInfo(req.params.id);
-  if (access.visibility !== "private" && req.user.role !== "master") {
-    return res.status(403).json({ error: "Apenas o usuário master pode excluir quadros compartilhados" });
-  }
-  repo.deleteBoard(req.params.id);
-  res.json({ ok: true });
-});
+router.delete(
+  "/:id",
+  requireBoardAccess((req) => req.params.id),
+  ah(async (req, res) => {
+    const access = await repo.getBoardAccessInfo(req.params.id);
+    if (access.visibility !== "private" && req.user.role !== "master") {
+      return res.status(403).json({ error: "Apenas o usuário master pode excluir quadros compartilhados" });
+    }
+    await repo.deleteBoard(req.params.id);
+    res.json({ ok: true });
+  })
+);
 
-router.post("/:id/clear", requireBoardAccess((req) => req.params.id), (req, res) => {
-  repo.clearBoard(req.params.id);
-  res.json({ ok: true });
-});
+router.post(
+  "/:id/clear",
+  requireBoardAccess((req) => req.params.id),
+  ah(async (req, res) => {
+    await repo.clearBoard(req.params.id);
+    res.json({ ok: true });
+  })
+);
 
-router.post("/:boardId/lists", requireBoardAccess((req) => req.params.boardId), (req, res) => {
-  const { id, title } = req.body || {};
-  if (!title?.trim()) return res.status(400).json({ error: "Título obrigatório" });
-  const listId = repo.createList(req.params.boardId, { id, title: title.trim() });
-  res.status(201).json({ id: listId });
-});
+router.post(
+  "/:boardId/lists",
+  requireBoardAccess((req) => req.params.boardId),
+  ah(async (req, res) => {
+    const { id, title } = req.body || {};
+    if (!title?.trim()) return res.status(400).json({ error: "Título obrigatório" });
+    const listId = await repo.createList(req.params.boardId, { id, title: title.trim() });
+    res.status(201).json({ id: listId });
+  })
+);
 
-router.put("/:boardId/list-order", requireBoardAccess((req) => req.params.boardId), (req, res) => {
-  const { orderedListIds } = req.body || {};
-  if (!Array.isArray(orderedListIds)) return res.status(400).json({ error: "orderedListIds obrigatório" });
-  repo.setListOrder(orderedListIds);
-  res.json({ ok: true });
-});
+router.put(
+  "/:boardId/list-order",
+  requireBoardAccess((req) => req.params.boardId),
+  ah(async (req, res) => {
+    const { orderedListIds } = req.body || {};
+    if (!Array.isArray(orderedListIds)) return res.status(400).json({ error: "orderedListIds obrigatório" });
+    await repo.setListOrder(orderedListIds);
+    res.json({ ok: true });
+  })
+);
 
 export default router;

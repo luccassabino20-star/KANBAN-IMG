@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { db } from "./db.js";
+import { pool } from "./db.js";
 
 export function uid() {
   return crypto.randomUUID();
@@ -9,52 +9,60 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+async function q(text, params) {
+  return pool.query(text, params);
+}
+
 // ---------- Users ----------
-export function countUsers() {
-  return db.prepare("SELECT COUNT(*) as c FROM users").get().c;
+export async function countUsers() {
+  const { rows } = await q("SELECT COUNT(*) as c FROM users");
+  return parseInt(rows[0].c, 10);
 }
-export function getUserById(id) {
-  return db.prepare("SELECT * FROM users WHERE id = ?").get(id) || null;
+export async function getUserById(id) {
+  const { rows } = await q("SELECT * FROM users WHERE id = $1", [id]);
+  return rows[0] || null;
 }
-export function getUserByEmail(email) {
-  return db.prepare("SELECT * FROM users WHERE email = ?").get((email || "").toLowerCase()) || null;
+export async function getUserByEmail(email) {
+  const { rows } = await q("SELECT * FROM users WHERE email = $1", [(email || "").toLowerCase()]);
+  return rows[0] || null;
 }
-export function listUsers() {
-  return db.prepare("SELECT * FROM users ORDER BY created_at ASC").all();
+export async function listUsers() {
+  const { rows } = await q("SELECT * FROM users ORDER BY created_at ASC");
+  return rows;
 }
-export function insertUser({ id, name, email, passwordHash, role }) {
+export async function insertUser({ id, name, email, passwordHash, role }) {
   const userId = id || uid();
-  db.prepare(
-    "INSERT INTO users (id, name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-  ).run(userId, name, email.toLowerCase(), passwordHash, role, nowIso());
+  await q(
+    "INSERT INTO users (id, name, email, password_hash, role, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+    [userId, name, email.toLowerCase(), passwordHash, role, nowIso()]
+  );
   return getUserById(userId);
 }
-export function updateUser(id, { name, email }) {
-  const user = getUserById(id);
+export async function updateUser(id, { name, email }) {
+  const user = await getUserById(id);
   if (!user) return null;
-  db.prepare("UPDATE users SET name = ?, email = ? WHERE id = ?").run(
+  await q("UPDATE users SET name = $1, email = $2 WHERE id = $3", [
     name ?? user.name,
     (email ?? user.email).toLowerCase(),
-    id
-  );
+    id,
+  ]);
   return getUserById(id);
 }
-export function setPassword(id, passwordHash) {
-  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, id);
+export async function setPassword(id, passwordHash) {
+  await q("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, id]);
 }
-export function deleteUser(id) {
-  db.prepare("DELETE FROM users WHERE id = ?").run(id);
+export async function deleteUser(id) {
+  await q("DELETE FROM users WHERE id = $1", [id]);
 }
-export function deletePrivateBoardsByOwner(userId) {
-  db.prepare("DELETE FROM boards WHERE owner_id = ? AND visibility = 'private'").run(userId);
+export async function deletePrivateBoardsByOwner(userId) {
+  await q("DELETE FROM boards WHERE owner_id = $1 AND visibility = 'private'", [userId]);
 }
 export function publicUser(u) {
   if (!u) return null;
   return { id: u.id, name: u.name, email: u.email, role: u.role, createdAt: u.created_at };
 }
-export function scrubUserFromCards(userId) {
-  const rows = db.prepare("SELECT id, member_ids FROM cards").all();
-  const stmt = db.prepare("UPDATE cards SET member_ids = ? WHERE id = ?");
+export async function scrubUserFromCards(userId) {
+  const { rows } = await q("SELECT id, member_ids FROM cards");
   for (const row of rows) {
     let ids;
     try {
@@ -63,98 +71,109 @@ export function scrubUserFromCards(userId) {
       ids = [];
     }
     if (ids.includes(userId)) {
-      stmt.run(JSON.stringify(ids.filter((x) => x !== userId)), row.id);
+      await q("UPDATE cards SET member_ids = $1 WHERE id = $2", [
+        JSON.stringify(ids.filter((x) => x !== userId)),
+        row.id,
+      ]);
     }
   }
 }
 
 // ---------- Boards / Lists / Cards ----------
-function nextPosition(table, whereCol, whereVal) {
-  const row =
+async function nextPosition(table, whereCol, whereVal) {
+  const { rows } =
     whereVal === undefined
-      ? db.prepare(`SELECT COALESCE(MAX(position), -1) as m FROM ${table}`).get()
-      : db.prepare(`SELECT COALESCE(MAX(position), -1) as m FROM ${table} WHERE ${whereCol} = ?`).get(whereVal);
-  return row.m + 1;
+      ? await q(`SELECT COALESCE(MAX(position), -1) as m FROM ${table}`)
+      : await q(`SELECT COALESCE(MAX(position), -1) as m FROM ${table} WHERE ${whereCol} = $1`, [whereVal]);
+  return rows[0].m + 1;
 }
 
-export function createBoard({ id, title, ownerId, visibility }) {
+export async function createBoard({ id, title, ownerId, visibility }) {
   const boardId = id || uid();
-  const pos = nextPosition("boards");
-  db.prepare(
-    "INSERT INTO boards (id, title, owner_id, visibility, position, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-  ).run(boardId, title, ownerId || null, visibility === "private" ? "private" : "shared", pos, nowIso());
+  const pos = await nextPosition("boards");
+  await q(
+    "INSERT INTO boards (id, title, owner_id, visibility, position, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+    [boardId, title, ownerId || null, visibility === "private" ? "private" : "shared", pos, nowIso()]
+  );
   return boardId;
 }
-export function renameBoard(id, title) {
-  db.prepare("UPDATE boards SET title = ? WHERE id = ?").run(title, id);
+export async function renameBoard(id, title) {
+  await q("UPDATE boards SET title = $1 WHERE id = $2", [title, id]);
 }
-export function setBoardBackground(id, background) {
-  db.prepare("UPDATE boards SET background = ? WHERE id = ?").run(background || null, id);
+export async function setBoardBackground(id, background) {
+  await q("UPDATE boards SET background = $1 WHERE id = $2", [background || null, id]);
 }
-export function deleteBoard(id) {
-  db.prepare("DELETE FROM boards WHERE id = ?").run(id);
+export async function deleteBoard(id) {
+  await q("DELETE FROM boards WHERE id = $1", [id]);
 }
-export function clearBoard(id) {
-  db.prepare("DELETE FROM lists WHERE board_id = ?").run(id);
+export async function clearBoard(id) {
+  await q("DELETE FROM lists WHERE board_id = $1", [id]);
 }
-export function getBoardAccessInfo(boardId) {
-  const row = db.prepare("SELECT owner_id, visibility FROM boards WHERE id = ?").get(boardId);
+export async function getBoardAccessInfo(boardId) {
+  const { rows } = await q("SELECT owner_id, visibility FROM boards WHERE id = $1", [boardId]);
+  const row = rows[0];
   if (!row) return null;
   return { ownerId: row.owner_id, visibility: row.visibility };
 }
-export function getBoardIdForList(listId) {
-  const row = db.prepare("SELECT board_id FROM lists WHERE id = ?").get(listId);
-  return row ? row.board_id : null;
+export async function getBoardIdForList(listId) {
+  const { rows } = await q("SELECT board_id FROM lists WHERE id = $1", [listId]);
+  return rows[0] ? rows[0].board_id : null;
 }
-export function getBoardIdForCard(cardId) {
-  const row = db
-    .prepare("SELECT l.board_id as board_id FROM cards c JOIN lists l ON l.id = c.list_id WHERE c.id = ?")
-    .get(cardId);
-  return row ? row.board_id : null;
+export async function getBoardIdForCard(cardId) {
+  const { rows } = await q(
+    "SELECT l.board_id as board_id FROM cards c JOIN lists l ON l.id = c.list_id WHERE c.id = $1",
+    [cardId]
+  );
+  return rows[0] ? rows[0].board_id : null;
 }
-export function boardExists(id) {
-  return !!db.prepare("SELECT 1 FROM boards WHERE id = ?").get(id);
+export async function boardExists(id) {
+  const { rows } = await q("SELECT 1 FROM boards WHERE id = $1", [id]);
+  return rows.length > 0;
 }
 
-export function createList(boardId, { id, title }) {
+export async function createList(boardId, { id, title }) {
   const listId = id || uid();
-  const pos = nextPosition("lists", "board_id", boardId);
-  db.prepare("INSERT INTO lists (id, board_id, title, position) VALUES (?, ?, ?, ?)").run(listId, boardId, title, pos);
+  const pos = await nextPosition("lists", "board_id", boardId);
+  await q("INSERT INTO lists (id, board_id, title, position) VALUES ($1, $2, $3, $4)", [listId, boardId, title, pos]);
   return listId;
 }
-export function renameList(id, title) {
-  db.prepare("UPDATE lists SET title = ? WHERE id = ?").run(title, id);
+export async function renameList(id, title) {
+  await q("UPDATE lists SET title = $1 WHERE id = $2", [title, id]);
 }
-export function setListColor(id, color) {
-  db.prepare("UPDATE lists SET color = ? WHERE id = ?").run(color || null, id);
+export async function setListColor(id, color) {
+  await q("UPDATE lists SET color = $1 WHERE id = $2", [color || null, id]);
 }
-export function deleteList(id) {
-  db.prepare("DELETE FROM lists WHERE id = ?").run(id);
+export async function deleteList(id) {
+  await q("DELETE FROM lists WHERE id = $1", [id]);
 }
-export function setListOrder(orderedListIds) {
-  const stmt = db.prepare("UPDATE lists SET position = ? WHERE id = ?");
-  orderedListIds.forEach((id, idx) => stmt.run(idx, id));
+export async function setListOrder(orderedListIds) {
+  for (let idx = 0; idx < orderedListIds.length; idx++) {
+    await q("UPDATE lists SET position = $1 WHERE id = $2", [idx, orderedListIds[idx]]);
+  }
 }
-export function clearListCards(listId) {
-  db.prepare("DELETE FROM cards WHERE list_id = ?").run(listId);
+export async function clearListCards(listId) {
+  await q("DELETE FROM cards WHERE list_id = $1", [listId]);
 }
-export function listExists(id) {
-  return !!db.prepare("SELECT 1 FROM lists WHERE id = ?").get(id);
+export async function listExists(id) {
+  const { rows } = await q("SELECT 1 FROM lists WHERE id = $1", [id]);
+  return rows.length > 0;
 }
 
-export function createCard(listId, { id, title }) {
+export async function createCard(listId, { id, title }) {
   const cardId = id || uid();
-  const pos = nextPosition("cards", "list_id", listId);
-  db.prepare(
-    "INSERT INTO cards (id, list_id, title, description, labels, due, checklist, member_ids, position) VALUES (?, ?, ?, '', '[]', NULL, '[]', '[]', ?)"
-  ).run(cardId, listId, title, pos);
+  const pos = await nextPosition("cards", "list_id", listId);
+  await q(
+    "INSERT INTO cards (id, list_id, title, description, labels, due, checklist, member_ids, position) VALUES ($1, $2, $3, '', '[]', NULL, '[]', '[]', $4)",
+    [cardId, listId, title, pos]
+  );
   return cardId;
 }
-export function deleteCard(id) {
-  db.prepare("DELETE FROM cards WHERE id = ?").run(id);
+export async function deleteCard(id) {
+  await q("DELETE FROM cards WHERE id = $1", [id]);
 }
-export function updateCard(id, patch) {
-  const row = db.prepare("SELECT * FROM cards WHERE id = ?").get(id);
+export async function updateCard(id, patch) {
+  const { rows } = await q("SELECT * FROM cards WHERE id = $1", [id]);
+  const row = rows[0];
   if (!row) return;
   const next = {
     title: patch.title ?? row.title,
@@ -169,26 +188,28 @@ export function updateCard(id, patch) {
     urgent: patch.urgent !== undefined ? (patch.urgent ? 1 : 0) : row.urgent,
     important: patch.important !== undefined ? (patch.important ? 1 : 0) : row.important,
   };
-  db.prepare(
-    "UPDATE cards SET title=?, description=?, labels=?, due=?, start_date=?, location=?, checklist=?, member_ids=?, completed=?, urgent=?, important=? WHERE id=?"
-  ).run(
-    next.title,
-    next.description,
-    next.labels,
-    next.due,
-    next.start_date,
-    next.location,
-    next.checklist,
-    next.member_ids,
-    next.completed,
-    next.urgent,
-    next.important,
-    id
+  await q(
+    "UPDATE cards SET title=$1, description=$2, labels=$3, due=$4, start_date=$5, location=$6, checklist=$7, member_ids=$8, completed=$9, urgent=$10, important=$11 WHERE id=$12",
+    [
+      next.title,
+      next.description,
+      next.labels,
+      next.due,
+      next.start_date,
+      next.location,
+      next.checklist,
+      next.member_ids,
+      next.completed,
+      next.urgent,
+      next.important,
+      id,
+    ]
   );
 }
-export function setCardOrder(listId, cardIds) {
-  const stmt = db.prepare("UPDATE cards SET list_id = ?, position = ? WHERE id = ?");
-  cardIds.forEach((id, idx) => stmt.run(listId, idx, id));
+export async function setCardOrder(listId, cardIds) {
+  for (let idx = 0; idx < cardIds.length; idx++) {
+    await q("UPDATE cards SET list_id = $1, position = $2 WHERE id = $3", [listId, idx, cardIds[idx]]);
+  }
 }
 
 // ---------- Meeting Minutes (Atas) ----------
@@ -205,36 +226,39 @@ function publicMinute(row) {
     createdAt: row.created_at,
   };
 }
-export function listMinutes() {
-  return db.prepare("SELECT * FROM minutes ORDER BY date DESC, created_at DESC").all().map(publicMinute);
+export async function listMinutes() {
+  const { rows } = await q("SELECT * FROM minutes ORDER BY date DESC, created_at DESC");
+  return rows.map(publicMinute);
 }
-export function getMinuteById(id) {
-  const row = db.prepare("SELECT * FROM minutes WHERE id = ?").get(id);
-  return row ? publicMinute(row) : null;
+export async function getMinuteById(id) {
+  const { rows } = await q("SELECT * FROM minutes WHERE id = $1", [id]);
+  return rows[0] ? publicMinute(rows[0]) : null;
 }
-export function getMinuteAuthorId(id) {
-  const row = db.prepare("SELECT author_id FROM minutes WHERE id = ?").get(id);
-  return row ? row.author_id : null;
+export async function getMinuteAuthorId(id) {
+  const { rows } = await q("SELECT author_id FROM minutes WHERE id = $1", [id]);
+  return rows[0] ? rows[0].author_id : null;
 }
-export function createMinute({ id, title, date, authorId, attendeeIds, agenda, decisions, actionItems }) {
+export async function createMinute({ id, title, date, authorId, attendeeIds, agenda, decisions, actionItems }) {
   const minuteId = id || uid();
-  db.prepare(
-    "INSERT INTO minutes (id, title, date, author_id, attendee_ids, agenda, decisions, action_items, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-  ).run(
-    minuteId,
-    title,
-    date,
-    authorId || null,
-    JSON.stringify(attendeeIds || []),
-    agenda || "",
-    decisions || "",
-    JSON.stringify(actionItems || []),
-    nowIso()
+  await q(
+    "INSERT INTO minutes (id, title, date, author_id, attendee_ids, agenda, decisions, action_items, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+    [
+      minuteId,
+      title,
+      date,
+      authorId || null,
+      JSON.stringify(attendeeIds || []),
+      agenda || "",
+      decisions || "",
+      JSON.stringify(actionItems || []),
+      nowIso(),
+    ]
   );
   return minuteId;
 }
-export function updateMinute(id, patch) {
-  const row = db.prepare("SELECT * FROM minutes WHERE id = ?").get(id);
+export async function updateMinute(id, patch) {
+  const { rows } = await q("SELECT * FROM minutes WHERE id = $1", [id]);
+  const row = rows[0];
   if (!row) return;
   const next = {
     title: patch.title ?? row.title,
@@ -244,26 +268,27 @@ export function updateMinute(id, patch) {
     decisions: patch.decisions !== undefined ? patch.decisions : row.decisions,
     action_items: patch.actionItems ? JSON.stringify(patch.actionItems) : row.action_items,
   };
-  db.prepare("UPDATE minutes SET title=?, date=?, attendee_ids=?, agenda=?, decisions=?, action_items=? WHERE id=?").run(
+  await q("UPDATE minutes SET title=$1, date=$2, attendee_ids=$3, agenda=$4, decisions=$5, action_items=$6 WHERE id=$7", [
     next.title,
     next.date,
     next.attendee_ids,
     next.agenda,
     next.decisions,
     next.action_items,
-    id
-  );
+    id,
+  ]);
 }
-export function deleteMinute(id) {
-  db.prepare("DELETE FROM minutes WHERE id = ?").run(id);
+export async function deleteMinute(id) {
+  await q("DELETE FROM minutes WHERE id = $1", [id]);
 }
 
-export function getWorkspace(userId) {
-  const boards = db
-    .prepare("SELECT * FROM boards WHERE visibility = 'shared' OR owner_id = ? ORDER BY position ASC")
-    .all(userId);
-  const lists = db.prepare("SELECT * FROM lists ORDER BY position ASC").all();
-  const cards = db.prepare("SELECT * FROM cards ORDER BY position ASC").all();
+export async function getWorkspace(userId) {
+  const { rows: boards } = await q(
+    "SELECT * FROM boards WHERE visibility = 'shared' OR owner_id = $1 ORDER BY position ASC",
+    [userId]
+  );
+  const { rows: lists } = await q("SELECT * FROM lists ORDER BY position ASC");
+  const { rows: cards } = await q("SELECT * FROM cards ORDER BY position ASC");
 
   return boards.map((b) => {
     const boardLists = lists.filter((l) => l.board_id === b.id);

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -5,6 +6,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { initDb } from "./db.js";
 import authRouter from "./routes/auth.js";
 import usersRouter from "./routes/users.js";
 import boardsRouter from "./routes/boards.js";
@@ -46,6 +48,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
+await initDb();
 app.listen(PORT, () => {
   console.log(`Kanban API rodando em http://localhost:${PORT}`);
 });
