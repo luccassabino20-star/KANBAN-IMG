@@ -1048,6 +1048,18 @@ input, textarea { font-family: inherit; }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-small { padding: 6px 10px; font-size: 13px; }
 
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: var(--bg-list); }
+
 .btn-cancel {
   border: none;
   background: transparent;
@@ -1568,6 +1580,19 @@ input, textarea { font-family: inherit; }
   margin: 0 0 28px;
 }
 .landing-hero-actions { display: flex; justify-content: center; gap: 12px; }
+.landing-hero-secondary { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.landing-hero-note { font-size: 12.5px; color: var(--text-muted); margin: 16px 0 0; }
+
+.landing-benefits {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 28px;
+}
+.landing-benefit-item h3 { font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+.landing-benefit-item p { font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin: 0; }
 
 .landing-features {
   max-width: 1080px;
@@ -1608,6 +1633,71 @@ input, textarea { font-family: inherit; }
 .landing-feature-card h3 { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
 .landing-feature-card p { font-size: 13.5px; line-height: 1.55; color: var(--text-secondary); margin: 0; }
 
+.landing-pricing {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px 72px;
+  text-align: center;
+}
+.landing-pricing h2 { font-size: 24px; font-weight: 800; margin: 0 0 10px; }
+.landing-pricing-sub { font-size: 14.5px; color: var(--text-secondary); margin: 0 0 36px; }
+.landing-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  text-align: left;
+}
+.landing-plan-card {
+  position: relative;
+  background: var(--bg-topbar);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.landing-plan-card.highlight {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-modal);
+  transform: translateY(-6px);
+}
+.landing-plan-badge {
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  background: var(--accent);
+  color: var(--bg-app);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.landing-plan-card h3 { font-size: 18px; font-weight: 800; margin: 6px 0 4px; }
+.landing-plan-tagline { font-size: 13px; color: var(--text-secondary); margin: 0 0 20px; min-height: 34px; }
+.landing-plan-price { display: flex; align-items: baseline; gap: 4px; margin-bottom: 20px; }
+.landing-plan-price-value { font-size: 30px; font-weight: 800; letter-spacing: -0.01em; }
+.landing-plan-price-period { font-size: 13px; color: var(--text-secondary); }
+.landing-plan-card .btn-primary,
+.landing-plan-card .btn-secondary { width: 100%; padding: 10px; font-size: 13.5px; margin-bottom: 22px; }
+.landing-plan-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.landing-plan-features li {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  padding-left: 22px;
+  position: relative;
+  line-height: 1.4;
+}
+.landing-plan-features li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent);
+  font-weight: 800;
+}
+
 .landing-secondary {
   max-width: 900px;
   margin: 0 auto;
@@ -1621,15 +1711,20 @@ input, textarea { font-family: inherit; }
 
 .landing-footer {
   display: flex;
-  justify-content: center;
-  padding: 40px 24px 64px;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 48px 24px 64px;
   border-top: 1px solid var(--border-subtle);
+  text-align: center;
 }
+.landing-footer h2 { font-size: 22px; font-weight: 800; margin: 0; }
 
 @media (max-width: 640px) {
   .landing-nav { padding: 14px 18px; }
   .landing-hero { padding: 56px 18px 40px; }
   .landing-hero h1 { font-size: 26px; }
+  .landing-plan-card.highlight { transform: none; }
 }
 
 .auth-shell {

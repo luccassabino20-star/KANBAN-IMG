@@ -1,14 +1,54 @@
 import ThemeToggle from "../components/ThemeToggle.jsx";
 
 const FEATURES = [
-  { badge: "Q", title: "Quadro Kanban", text: "Organize tarefas em listas e cartões, e arraste e solte para mudar o andamento." },
-  { badge: "T", title: "Tabela", text: "Veja todos os cartões em formato de planilha, com busca e filtro por membro." },
-  { badge: "C", title: "Calendário", text: "Acompanhe prazos e datas de início dos cartões em uma visão mensal." },
-  { badge: "L", title: "Linha do tempo", text: "Visualize o cronograma dos projetos período a período." },
-  { badge: "P", title: "Painel", text: "Métricas e indicadores do progresso das suas equipes e quadros." },
-  { badge: "M", title: "Mapa", text: "Localize tarefas com endereço cadastrado em um mapa interativo." },
-  { badge: "E", title: "Matriz Eisenhower", text: "Priorize tarefas por urgência e importância de forma visual." },
-  { badge: "A", title: "Atas de reunião", text: "Registre pauta, decisões e itens de ação de cada reunião da equipe." },
+  { badge: "Q", title: "Quadro Kanban", text: "Chega de tarefa perdida em print de conversa. Arraste e solte entre listas e veja o andamento real da equipe." },
+  { badge: "T", title: "Tabela", text: "Todos os cartões em formato de planilha, com busca e filtro por membro — sem precisar de outra ferramenta." },
+  { badge: "C", title: "Calendário", text: "Prazos e datas de início numa visão mensal, para nada passar despercebido." },
+  { badge: "L", title: "Linha do tempo", text: "O cronograma inteiro do projeto num só olhar, período a período." },
+  { badge: "P", title: "Painel", text: "Métricas e indicadores prontos para mostrar o progresso sem montar planilha nenhuma." },
+  { badge: "M", title: "Mapa", text: "Tarefas com endereço plotadas num mapa interativo — ótimo para equipes em campo." },
+  { badge: "E", title: "Matriz Eisenhower", text: "Priorize por urgência e importância e pare de trabalhar só no que grita mais alto." },
+  { badge: "A", title: "Atas de reunião", text: "Pauta, decisões e itens de ação registrados — e cobrados depois." },
+];
+
+const BENEFITS = [
+  { title: "Tudo num só lugar", text: "Substitua planilhas soltas, grupos de WhatsApp e ferramentas espalhadas por um único sistema." },
+  { title: "Sua equipe já entende", text: "Interface simples, sem curso ou treinamento — quem já usou um quadro Kanban começa a usar em minutos." },
+  { title: "Cresce com você", text: "De um time pequeno a várias áreas com quadros privados e compartilhados, controle de acessos e papéis." },
+];
+
+const PLANS = [
+  {
+    name: "Grátis",
+    price: "R$ 0",
+    period: "/mês",
+    tagline: "Para começar sem custo",
+    cta: "Começar grátis",
+    features: ["Até 3 usuários", "Quadros ilimitados", "Quadro Kanban, Tabela e Calendário", "Suporte por e-mail"],
+  },
+  {
+    name: "Profissional",
+    price: "R$ 39",
+    period: "/usuário/mês",
+    tagline: "Para equipes que querem controle total",
+    cta: "Assinar Profissional",
+    highlight: true,
+    features: [
+      "Usuários ilimitados",
+      "Todas as visões (Painel, Mapa, Linha do tempo, Matriz Eisenhower)",
+      "Atas de reunião",
+      "Quadros privados e compartilhados",
+      "Suporte prioritário",
+    ],
+  },
+  {
+    name: "Empresarial",
+    price: "Sob consulta",
+    period: "",
+    tagline: "Para organizações com necessidades específicas",
+    cta: "Falar com vendas",
+    features: ["Tudo do Profissional", "Onboarding dedicado", "Suporte dedicado", "Acordo de nível de serviço (SLA)"],
+  },
 ];
 
 export default function LandingScreen({ onEnter }) {
@@ -28,16 +68,29 @@ export default function LandingScreen({ onEnter }) {
       </header>
 
       <section className="landing-hero">
-        <h1>Organize projetos, tarefas e reuniões em um só lugar</h1>
+        <h1>Sua equipe organizada, sem esforço extra</h1>
         <p>
-          O Kanban IMG reúne quadros colaborativos, agenda, prioridades e atas de reunião num sistema simples,
-          rápido e feito para a sua equipe.
+          O Kanban IMG substitui planilhas soltas e grupos de WhatsApp por um só lugar: quadros, prazos, prioridades
+          e atas de reunião, sincronizados em tempo real para toda a equipe.
         </p>
         <div className="landing-hero-actions">
           <button className="btn-primary" onClick={onEnter}>
-            Entrar no sistema
+            Comece grátis agora
           </button>
+          <a className="btn-secondary landing-hero-secondary" href="#planos">
+            Ver planos
+          </a>
         </div>
+        <p className="landing-hero-note">Sem cartão de crédito. Cancele quando quiser.</p>
+      </section>
+
+      <section className="landing-benefits">
+        {BENEFITS.map((b) => (
+          <div className="landing-benefit-item" key={b.title}>
+            <h3>{b.title}</h3>
+            <p>{b.text}</p>
+          </div>
+        ))}
       </section>
 
       <section className="landing-features">
@@ -48,6 +101,32 @@ export default function LandingScreen({ onEnter }) {
               <span className="landing-feature-badge">{f.badge}</span>
               <h3>{f.title}</h3>
               <p>{f.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-pricing" id="planos">
+        <h2>Escolha o plano da sua equipe</h2>
+        <p className="landing-pricing-sub">Comece grátis e mude de plano quando sua equipe crescer.</p>
+        <div className="landing-pricing-grid">
+          {PLANS.map((p) => (
+            <div className={"landing-plan-card" + (p.highlight ? " highlight" : "")} key={p.name}>
+              {p.highlight && <span className="landing-plan-badge">Mais popular</span>}
+              <h3>{p.name}</h3>
+              <p className="landing-plan-tagline">{p.tagline}</p>
+              <div className="landing-plan-price">
+                <span className="landing-plan-price-value">{p.price}</span>
+                <span className="landing-plan-price-period">{p.period}</span>
+              </div>
+              <button className={p.highlight ? "btn-primary" : "btn-secondary"} onClick={onEnter}>
+                {p.cta}
+              </button>
+              <ul className="landing-plan-features">
+                {p.features.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>
@@ -65,8 +144,9 @@ export default function LandingScreen({ onEnter }) {
       </section>
 
       <footer className="landing-footer">
-        <button className="btn-primary btn-small" onClick={onEnter}>
-          Entrar no sistema
+        <h2>Pronto para organizar sua equipe?</h2>
+        <button className="btn-primary" onClick={onEnter}>
+          Comece grátis agora
         </button>
       </footer>
     </div>
