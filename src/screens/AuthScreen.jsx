@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../state/AuthContext.jsx";
 import ThemeToggle from "../components/ThemeToggle.jsx";
 
-export default function AuthScreen() {
+export default function AuthScreen({ onBack }) {
   const { login, registerSelf } = useAuth();
   const [mode, setMode] = useState("login"); // "login" | "signup"
   const [name, setName] = useState("");
@@ -41,6 +41,11 @@ export default function AuthScreen() {
   return (
     <div className="auth-shell">
       <ThemeToggle className="auth-theme-toggle" />
+      {onBack && (
+        <button className="auth-back-btn" onClick={onBack}>
+          ← Voltar
+        </button>
+      )}
       <div className="auth-brand">
         <div className="auth-brand-icon">IMG</div>
         <h1>Kanban IMG</h1>
