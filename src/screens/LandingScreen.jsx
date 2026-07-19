@@ -19,16 +19,16 @@ const BENEFITS = [
 
 const PLANS = [
   {
-    name: "Grátis",
-    price: "R$ 0",
+    name: "Básico",
+    price: "R$ 399",
     period: "/mês",
-    tagline: "Para começar sem custo",
-    cta: "Começar grátis",
+    tagline: "Para equipes pequenas começarem com o essencial",
+    cta: "Assinar Básico",
     features: ["Até 3 usuários", "Quadros ilimitados", "Quadro Kanban, Tabela e Calendário", "Suporte por e-mail"],
   },
   {
     name: "Profissional",
-    price: "R$ 39",
+    price: "R$ 799",
     period: "/usuário/mês",
     tagline: "Para equipes que querem controle total",
     cta: "Assinar Profissional",
@@ -75,13 +75,13 @@ export default function LandingScreen({ onEnter }) {
         </p>
         <div className="landing-hero-actions">
           <button className="btn-primary" onClick={onEnter}>
-            Comece grátis agora
+            Comece agora
           </button>
           <a className="btn-secondary landing-hero-secondary" href="#planos">
             Ver planos
           </a>
         </div>
-        <p className="landing-hero-note">Sem cartão de crédito. Cancele quando quiser.</p>
+        <p className="landing-hero-note">Sem burocracia. Cancele quando quiser.</p>
       </section>
 
       <section className="landing-benefits">
@@ -108,7 +108,7 @@ export default function LandingScreen({ onEnter }) {
 
       <section className="landing-pricing" id="planos">
         <h2>Escolha o plano da sua equipe</h2>
-        <p className="landing-pricing-sub">Comece grátis e mude de plano quando sua equipe crescer.</p>
+        <p className="landing-pricing-sub">Escolha o plano ideal para sua equipe e mude quando ela crescer.</p>
         <div className="landing-pricing-grid">
           {PLANS.map((p) => (
             <div className={"landing-plan-card" + (p.highlight ? " highlight" : "")} key={p.name}>
@@ -146,7 +146,7 @@ export default function LandingScreen({ onEnter }) {
       <footer className="landing-footer">
         <h2>Pronto para organizar sua equipe?</h2>
         <button className="btn-primary" onClick={onEnter}>
-          Comece grátis agora
+          Comece agora
         </button>
       </footer>
     </div>
