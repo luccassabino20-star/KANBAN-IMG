@@ -1525,8 +1525,9 @@ input, textarea { font-family: inherit; }
 /* ---------- Auth / Setup screens ---------- */
 /* ---------- Landing page ---------- */
 .landing-shell {
-  min-height: 100vh;
+  height: 100vh;
   width: 100%;
+  overflow-y: auto;
   background: var(--bg-app);
   color: var(--text-primary);
 }
